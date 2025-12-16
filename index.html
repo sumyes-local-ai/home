@@ -356,7 +356,7 @@
       <section class="card">
         <div class="section-title">
           <h2>🪜 操作流程</h2>
-          <span class="badge" id="copyStatus">剪貼簿：未檢查</span>
+          <!-- ✅ 已移除「剪貼簿：未檢查」顯示 -->
         </div>
 
         <ol class="steps">
@@ -379,7 +379,6 @@
             </p>
 
             <div class="buttons">
-              <!-- Replace href targets with your preferred URLs -->
               <button class="btn" data-href="https://gemini.google.com/" type="button">
                 前往第三方 AI 平台一
                 <small>以外部瀏覽器開啟</small>
@@ -397,13 +396,12 @@
                 <small>以外部瀏覽器開啟</small>
                 <span class="arrow">↗</span>
               </button>
-              
+
               <button class="btn" data-href="https://www.deepseek.com/" type="button">
                 前往第三方 AI 平台四
                 <small>以外部瀏覽器開啟</small>
                 <span class="arrow">↗</span>
               </button>
-              
             </div>
 
             <p class="note">點擊按鈕後將以外部瀏覽器開啟第三方網站。</p>
@@ -442,7 +440,6 @@
     </div>
 
     <footer>
-      <div>提示：若你不希望檢測剪貼簿狀態，可移除頁面上的「剪貼簿：未檢查」顯示與下方 JavaScript 的 clipboard 相關程式。</div>
       <div>© <span id="year"></span> Tutorial Page</div>
     </footer>
   </div>
@@ -515,40 +512,9 @@
       btn.addEventListener('click', () => {
         const url = btn.getAttribute('data-href');
         if (!url) return;
-        // Open in a new tab/window (external browser behavior)
         window.open(url, '_blank', 'noopener,noreferrer');
       });
     });
-
-    // ------------------------------------------------------------
-    // Clipboard status (optional): checks if clipboard has text
-    // Note: Some browsers require HTTPS + user gesture to read clipboard.
-    // This is best-effort; page still works even if not permitted.
-    // ------------------------------------------------------------
-    (async function(){
-      const el = document.getElementById('copyStatus');
-      const set = (txt) => { if (el) el.textContent = txt; };
-
-      try{
-        // Only try on secure contexts; otherwise it will throw.
-        if (!window.isSecureContext) {
-          set('剪貼簿：需 HTTPS 才能檢查');
-          return;
-        }
-        if (!navigator.clipboard || !navigator.clipboard.readText) {
-          set('剪貼簿：瀏覽器不支援檢查');
-          return;
-        }
-
-        // Attempt read (may require user gesture; will fail silently)
-        const text = await navigator.clipboard.readText();
-        if (text && text.trim().length > 0) set('剪貼簿：已偵測到內容');
-        else set('剪貼簿：目前為空（可回 App 重新輸出）');
-      }catch(e){
-        // If permission denied / no gesture
-        set('剪貼簿：無法自動檢查（不影響使用）');
-      }
-    })();
 
     // Footer year
     document.getElementById('year').textContent = new Date().getFullYear();

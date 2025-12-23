@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pagina di tutorial｜Usare strumenti AI di terze parti per revisione e riepilogo</title>
+  <meta name="description" content="Questa pagina spiega come usare il prompt e il testo bozza generati dall’app e, successivamente, utilizzare strumenti AI online di terze parti per la revisione e la creazione di un riepilogo." />
+
+  <style>
+    :root{
+      --bg0:#070A12;
+      --bg1:#0A1024;
+      --card: rgba(255,255,255,0.06);
+      --card2: rgba(255,255,255,0.08);
+      --line: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.70);
+      --muted2: rgba(255,255,255,0.58);
+      --accent: rgba(120, 220, 255, 0.95);
+      --accent2: rgba(255, 170, 240, 0.92);
+      --warn: rgba(255, 210, 120, 0.95);
+      --shadow: 0 20px 60px rgba(0,0,0,0.45);
+      --radius: 18px;
+      --radius2: 22px;
+      --maxw: 980px;
+
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+        "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+      --font-serif: ui-serif, "Noto Serif TC", "PingFang TC", "Songti TC",
+        "PMingLiU", serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--font-sans);
+      color: var(--text);
+      background: radial-gradient(1200px 900px at 20% 10%, rgba(120,220,255,0.14), transparent 60%),
+                  radial-gradient(900px 700px at 80% 20%, rgba(255,170,240,0.12), transparent 55%),
+                  radial-gradient(1100px 800px at 60% 90%, rgba(140,255,210,0.10), transparent 60%),
+                  linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
+
+    /* breathing ambient blobs (JS will animate subtly) */
+    .ambient{
+      position:fixed;
+      inset:-20vh -20vw;
+      pointer-events:none;
+      filter: blur(30px);
+      opacity: 0.75;
+      z-index:0;
+    }
+    .blob{
+      position:absolute;
+      width: 420px;
+      height: 420px;
+      border-radius: 999px;
+      transform: translate3d(0,0,0);
+      mix-blend-mode: screen;
+      opacity: 0.55;
+    }
+    .blob.a{ background: radial-gradient(circle at 30% 30%, rgba(120,220,255,0.85), rgba(120,220,255,0.0) 65%); }
+    .blob.b{ background: radial-gradient(circle at 35% 40%, rgba(255,170,240,0.85), rgba(255,170,240,0.0) 68%); }
+    .blob.c{ background: radial-gradient(circle at 40% 35%, rgba(140,255,210,0.75), rgba(140,255,210,0.0) 70%); }
+
+    .wrap{
+      position:relative;
+      z-index:1;
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 28px 18px 60px;
+    }
+
+    header{
+      margin-top: 8px;
+      padding: 22px 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.04));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .kicker{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color: var(--muted2);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:99px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      box-shadow: 0 0 24px rgba(120,220,255,0.35);
+    }
+
+    h1{
+      margin: 10px 0 8px;
+      font-size: clamp(24px, 4.2vw, 38px);
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+    }
+    .subtitle{
+      margin: 0;
+      color: var(--muted);
+      font-size: 15.5px;
+      line-height: 1.7;
+    }
+    .subtitle strong{
+      font-weight: 700;
+      color: rgba(255,255,255,0.95);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (max-width: 860px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      border: 1px solid var(--line);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+      backdrop-filter: blur(10px);
+      padding: 18px 16px;
+    }
+
+    .section-title{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:10px;
+      margin: 0 0 10px;
+    }
+    .section-title h2{
+      margin:0;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+    }
+    .badge{
+      font-size: 12px;
+      color: rgba(255,255,255,0.78);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.05);
+      white-space: nowrap;
+    }
+
+    .steps{
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .step{
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      padding: 14px 14px 12px;
+      position:relative;
+      overflow:hidden;
+    }
+    .step::before{
+      content:"";
+      position:absolute;
+      inset: -2px -2px auto -2px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(120,220,255,0.55), rgba(255,170,240,0.35), transparent);
+      opacity: 0.8;
+    }
+    .step h3{
+      margin: 0 0 6px;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+    }
+    .step p{
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 14.5px;
+    }
+    .hint{
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px dashed rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.78);
+      background: rgba(255,255,255,0.03);
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+
+    .buttons{
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .btn{
+      width:100%;
+      appearance:none;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: radial-gradient(80% 140% at 10% 10%, rgba(120,220,255,0.18), rgba(255,255,255,0.05)),
+                  linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      color: rgba(255,255,255,0.92);
+      padding: 13px 14px;
+      border-radius: 16px;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      position:relative;
+      overflow:hidden;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.28);
+      text-align:left;
+    }
+    .btn:hover{
+      transform: translateY(-1px);
+      border-color: rgba(120,220,255,0.35);
+    }
+    .btn:active{
+      transform: translateY(0px) scale(0.995);
+    }
+    .btn small{
+      display:block;
+      margin-top: 4px;
+      color: rgba(255,255,255,0.62);
+      font-size: 12.5px;
+      letter-spacing: 0.02em;
+    }
+    .btn .arrow{
+      position:absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(0,0,0,0.18);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family: var(--font-mono);
+      color: rgba(255,255,255,0.78);
+    }
+
+    .note{
+      margin-top: 10px;
+      color: rgba(255,255,255,0.68);
+      font-size: 13.5px;
+      line-height: 1.65;
+      border-left: 3px solid rgba(255,255,255,0.18);
+      padding-left: 10px;
+    }
+
+    .legal{
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255, 210, 120, 0.12), rgba(255,255,255,0.03));
+      padding: 16px 14px;
+    }
+    .legal h2{
+      margin: 0 0 10px;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .legal h2 .warn{
+      width: 10px; height: 10px; border-radius: 999px;
+      background: var(--warn);
+      box-shadow: 0 0 18px rgba(255,210,120,0.35);
+    }
+    .legal ul{
+      margin: 0;
+      padding-left: 18px;
+      color: rgba(255,255,255,0.76);
+      line-height: 1.7;
+      font-size: 13.6px;
+    }
+    .legal li{ margin: 6px 0; }
+
+    .culture{
+      margin-top: 12px;
+      padding: 14px 14px;
+      border-radius: var(--radius2);
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.03);
+    }
+    .culture .quote{
+      margin:0;
+      font-family: var(--font-serif);
+      color: rgba(255,255,255,0.80);
+      line-height: 1.85;
+      font-size: 14.2px;
+    }
+    .culture .sig{
+      margin-top: 8px;
+      color: rgba(255,255,255,0.58);
+      font-size: 12.8px;
+      letter-spacing: 0.02em;
+    }
+
+    footer{
+      margin-top: 16px;
+      color: rgba(255,255,255,0.50);
+      text-align:center;
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+
+    /* reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      .ambient{ display:none; }
+      .btn{ transition:none; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Ambient breathing background -->
+  <div class="ambient" aria-hidden="true">
+    <div class="blob a" id="blobA"></div>
+    <div class="blob b" id="blobB"></div>
+    <div class="blob c" id="blobC"></div>
+  </div>
+
+  <div class="wrap">
+    <header>
+      <div class="kicker"><span class="dot"></span>NAVIGAZIONE ESTERNA</div>
+      <h2>Usa strumenti AI di terze parti per correggere e riassumere la bozza</h2>
+      <p class="subtitle">
+        Questa pagina spiega come usare il prompt e il testo bozza generati dall’app e, poi, utilizzare una piattaforma AI di terze parti online per la revisione o la creazione di un riepilogo.<br>
+        <strong>Questa app non fornisce servizi AI/LLM online.</strong><br>
+        Questa pagina è solo una guida operativa e ti aiuta ad aprire una piattaforma esterna per completare i passaggi in autonomia.
+      </p>
+    </header>
+
+    <div class="grid">
+      <!-- Steps + buttons -->
+      <section class="card">
+        <div class="section-title">
+          <h2>🪜 Procedura</h2>
+          <!-- ✅ Rimossa la dicitura “Appunti: non verificati” -->
+        </div>
+
+        <ol class="steps">
+          <li class="step">
+            <h3>Passaggio 1: Copia completata (eseguita automaticamente dall’app)</h3>
+            <p>
+              Dopo aver toccato “Esporta prompt” nell’app, l’app ha copiato automaticamente negli appunti il “prompt completo e il testo della bozza”.
+              Ora puoi andare direttamente su una piattaforma AI di terze parti e incollare il contenuto.
+            </p>
+            <div class="hint">
+              (Se quando incolli il contenuto risulta vuoto, torna nell’app e tocca di nuovo “Esporta prompt” per ricopiare.)
+            </div>
+          </li>
+
+          <li class="step">
+            <h3>Passaggio 2: Vai a una piattaforma AI di terze parti</h3>
+            <p>
+              Scegli una qualsiasi piattaforma AI online di terze parti e apri il suo sito con un browser esterno.<br>
+              (I pulsanti qui sotto sono solo a scopo di guida; la piattaforma effettiva la scegli tu.)
+            </p>
+
+            <div class="buttons">
+              <button class="btn" data-href="https://gemini.google.com/" type="button">
+                Vai alla piattaforma AI di terze parti 1
+                <small>Apri nel browser esterno</small>
+                <span class="arrow">↗</span>
+              </button>
+
+              <button class="btn" data-href="https://chat.openai.com/" type="button">
+                Vai alla piattaforma AI di terze parti 2
+                <small>Apri nel browser esterno</small>
+                <span class="arrow">↗</span>
+              </button>
+
+              <button class="btn" data-href="https://claude.ai/" type="button">
+                Vai alla piattaforma AI di terze parti 3
+                <small>Apri nel browser esterno</small>
+                <span class="arrow">↗</span>
+              </button>
+
+              <button class="btn" data-href="https://chat.deepseek.com/" type="button">
+                Vai alla piattaforma AI di terze parti 4
+                <small>Apri nel browser esterno</small>
+                <span class="arrow">↗</span>
+              </button>
+            </div>
+
+            <p class="note">Toccando un pulsante, il sito di terze parti verrà aperto in un browser esterno.</p>
+          </li>
+
+          <li class="step">
+            <h3>Passaggio 3: Incolla ed esegui</h3>
+            <p>
+              Una volta nella piattaforma AI di terze parti:<br>
+              1) Tieni premuto nel campo di input e scegli “Incolla”<br>
+              2) Verifica che il contenuto sia stato incollato per intero<br>
+              3) Segui le istruzioni della piattaforma per correggere o riassumere il testo
+            </p>
+          </li>
+        </ol>
+
+        <div class="culture">
+          <p class="quote">
+            “Gli strumenti trasformano le idee in un linguaggio condivisibile;<br>
+            la cultura riporta il linguaggio nel contesto umano.”
+          </p>
+          <div class="sig">— Questa pagina è solo una guida: il contenuto lo decidi tu, la piattaforma la scegli tu</div>
+        </div>
+      </section>
+
+      <!-- Legal / compliance -->
+      <aside class="card legal">
+        <h2><span class="warn"></span> ⚠️ Dichiarazione importante </h2>
+        <ul>
+          <li>Questa app non fornisce alcun servizio AI/LLM online di terze parti e non elabora né trasmette contenuti a piattaforme di terze parti per conto dell’utente.</li>
+          <li>I link presenti in questa pagina sono forniti esclusivamente come guida operativa.</li>
+          <li><b>Funzionalità, costi, piani gratuiti o a pagamento e termini d’uso delle piattaforme AI di terze parti sono stabiliti esclusivamente da ciascuna piattaforma e non sono collegati a questa app.</b></li>
+          <li>L’uso e i risultati ottenuti sulle piattaforme di terze parti devono rispettare le regole e i termini di tali piattaforme.</li>
+        </ul>
+      </aside>
+    </div>
+
+    <footer>
+      <div>© <span id="year"></span> Tutorial Page</div>
+    </footer>
+  </div>
+
+  <script>
+    // ------------------------------------------------------------
+    // Breathing ambient background (subtle, tech + culture vibe)
+    // ------------------------------------------------------------
+    (function(){
+      const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const blobA = document.getElementById('blobA');
+      const blobB = document.getElementById('blobB');
+      const blobC = document.getElementById('blobC');
+
+      function rand(min, max){ return Math.random() * (max - min) + min; }
+
+      // initial positions
+      let t0 = performance.now();
+      const base = {
+        a: { x: rand(6, 18),  y: rand(4, 18),  s: 1.00 },
+        b: { x: rand(55, 72), y: rand(8, 22),  s: 1.05 },
+        c: { x: rand(34, 56), y: rand(62, 78), s: 1.10 },
+      };
+
+      function apply(el, x, y, s, r){
+        el.style.transform = `translate(${x}vw, ${y}vh) scale(${s}) rotate(${r}deg)`;
+      }
+
+      function animate(now){
+        const dt = (now - t0) / 1000;
+
+        // breathing curves
+        const b1 = 0.5 + 0.5 * Math.sin(dt * 0.8);
+        const b2 = 0.5 + 0.5 * Math.sin(dt * 0.6 + 1.2);
+        const b3 = 0.5 + 0.5 * Math.sin(dt * 0.7 + 2.1);
+
+        // tiny drift
+        const drift = (k) => 1.2 * Math.sin(dt * 0.12 + k) + 0.8 * Math.sin(dt * 0.07 + k * 2);
+
+        if (!prefersReduced){
+          apply(blobA,
+            base.a.x + drift(1) + (b1 - 0.5) * 2.0,
+            base.a.y + drift(2) + (b1 - 0.5) * 1.2,
+            base.a.s + (b1 - 0.5) * 0.08,
+            (b1 - 0.5) * 6
+          );
+          apply(blobB,
+            base.b.x + drift(3) + (b2 - 0.5) * 2.5,
+            base.b.y + drift(4) + (b2 - 0.5) * 1.4,
+            base.b.s + (b2 - 0.5) * 0.09,
+            (b2 - 0.5) * -7
+          );
+          apply(blobC,
+            base.c.x + drift(5) + (b3 - 0.5) * 2.2,
+            base.c.y + drift(6) + (b3 - 0.5) * 1.6,
+            base.c.s + (b3 - 0.5) * 0.10,
+            (b3 - 0.5) * 5
+          );
+          requestAnimationFrame(animate);
+        }
+      }
+      requestAnimationFrame(animate);
+    })();
+
+    // ------------------------------------------------------------
+    // Buttons: open external links
+    // ------------------------------------------------------------
+    document.querySelectorAll('.btn[data-href]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const url = btn.getAttribute('data-href');
+        if (!url) return;
+        window.open(url, '_blank', 'noopener,noreferrer');
+      });
+    });
+
+    // Footer year
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

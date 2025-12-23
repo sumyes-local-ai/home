@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Página de Tutorial｜Usar ferramentas de IA de terceiros para revisar e resumir conteúdo</title>
+  <meta name="description" content="Esta página explica como usar o prompt e o texto rascunho gerados por este app e, em seguida, utilizar ferramentas de IA online de terceiros para revisão e resumo." />
+
+  <style>
+    :root{
+      --bg0:#070A12;
+      --bg1:#0A1024;
+      --card: rgba(255,255,255,0.06);
+      --card2: rgba(255,255,255,0.08);
+      --line: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.70);
+      --muted2: rgba(255,255,255,0.58);
+      --accent: rgba(120, 220, 255, 0.95);
+      --accent2: rgba(255, 170, 240, 0.92);
+      --warn: rgba(255, 210, 120, 0.95);
+      --shadow: 0 20px 60px rgba(0,0,0,0.45);
+      --radius: 18px;
+      --radius2: 22px;
+      --maxw: 980px;
+
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+        "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+      --font-serif: ui-serif, "Noto Serif TC", "PingFang TC", "Songti TC",
+        "PMingLiU", serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--font-sans);
+      color: var(--text);
+      background: radial-gradient(1200px 900px at 20% 10%, rgba(120,220,255,0.14), transparent 60%),
+                  radial-gradient(900px 700px at 80% 20%, rgba(255,170,240,0.12), transparent 55%),
+                  radial-gradient(1100px 800px at 60% 90%, rgba(140,255,210,0.10), transparent 60%),
+                  linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
+
+    /* breathing ambient blobs (JS will animate subtly) */
+    .ambient{
+      position:fixed;
+      inset:-20vh -20vw;
+      pointer-events:none;
+      filter: blur(30px);
+      opacity: 0.75;
+      z-index:0;
+    }
+    .blob{
+      position:absolute;
+      width: 420px;
+      height: 420px;
+      border-radius: 999px;
+      transform: translate3d(0,0,0);
+      mix-blend-mode: screen;
+      opacity: 0.55;
+    }
+    .blob.a{ background: radial-gradient(circle at 30% 30%, rgba(120,220,255,0.85), rgba(120,220,255,0.0) 65%); }
+    .blob.b{ background: radial-gradient(circle at 35% 40%, rgba(255,170,240,0.85), rgba(255,170,240,0.0) 68%); }
+    .blob.c{ background: radial-gradient(circle at 40% 35%, rgba(140,255,210,0.75), rgba(140,255,210,0.0) 70%); }
+
+    .wrap{
+      position:relative;
+      z-index:1;
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 28px 18px 60px;
+    }
+
+    header{
+      margin-top: 8px;
+      padding: 22px 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.04));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .kicker{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color: var(--muted2);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:99px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      box-shadow: 0 0 24px rgba(120,220,255,0.35);
+    }
+
+    h1{
+      margin: 10px 0 8px;
+      font-size: clamp(24px, 4.2vw, 38px);
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+    }
+    .subtitle{
+      margin: 0;
+      color: var(--muted);
+      font-size: 15.5px;
+      line-height: 1.7;
+    }
+    .subtitle strong{
+      font-weight: 700;
+      color: rgba(255,255,255,0.95);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (max-width: 860px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      border: 1px solid var(--line);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+      backdrop-filter: blur(10px);
+      padding: 18px 16px;
+    }
+
+    .section-title{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:10px;
+      margin: 0 0 10px;
+    }
+    .section-title h2{
+      margin:0;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+    }
+    .badge{
+      font-size: 12px;
+      color: rgba(255,255,255,0.78);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.05);
+      white-space: nowrap;
+    }
+
+    .steps{
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .step{
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      padding: 14px 14px 12px;
+      position:relative;
+      overflow:hidden;
+    }
+    .step::before{
+      content:"";
+      position:absolute;
+      inset: -2px -2px auto -2px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(120,220,255,0.55), rgba(255,170,240,0.35), transparent);
+      opacity: 0.8;
+    }
+    .step h3{
+      margin: 0 0 6px;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+    }
+    .step p{
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 14.5px;
+    }
+    .hint{
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px dashed rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.78);
+      background: rgba(255,255,255,0.03);
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+
+    .buttons{
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .btn{
+      width:100%;
+      appearance:none;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: radial-gradient(80% 140% at 10% 10%, rgba(120,220,255,0.18), rgba(255,255,255,0.05)),
+                  linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      color: rgba(255,255,255,0.92);
+      padding: 13px 14px;
+      border-radius: 16px;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      position:relative;
+      overflow:hidden;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.28);
+      text-align:left;
+    }
+    .btn:hover{
+      transform: translateY(-1px);
+      border-color: rgba(120,220,255,0.35);
+    }
+    .btn:active{
+      transform: translateY(0px) scale(0.995);
+    }
+    .btn small{
+      display:block;
+      margin-top: 4px;
+      color: rgba(255,255,255,0.62);
+      font-size: 12.5px;
+      letter-spacing: 0.02em;
+    }
+    .btn .arrow{
+      position:absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(0,0,0,0.18);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family: var(--font-mono);
+      color: rgba(255,255,255,0.78);
+    }
+
+    .note{
+      margin-top: 10px;
+      color: rgba(255,255,255,0.68);
+      font-size: 13.5px;
+      line-height: 1.65;
+      border-left: 3px solid rgba(255,255,255,0.18);
+      padding-left: 10px;
+    }
+
+    .legal{
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255, 210, 120, 0.12), rgba(255,255,255,0.03));
+      padding: 16px 14px;
+    }
+    .legal h2{
+      margin: 0 0 10px;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .legal h2 .warn{
+      width: 10px; height: 10px; border-radius: 999px;
+      background: var(--warn);
+      box-shadow: 0 0 18px rgba(255,210,120,0.35);
+    }
+    .legal ul{
+      margin: 0;
+      padding-left: 18px;
+      color: rgba(255,255,255,0.76);
+      line-height: 1.7;
+      font-size: 13.6px;
+    }
+    .legal li{ margin: 6px 0; }
+
+    .culture{
+      margin-top: 12px;
+      padding: 14px 14px;
+      border-radius: var(--radius2);
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.03);
+    }
+    .culture .quote{
+      margin:0;
+      font-family: var(--font-serif);
+      color: rgba(255,255,255,0.80);
+      line-height: 1.85;
+      font-size: 14.2px;
+    }
+    .culture .sig{
+      margin-top: 8px;
+      color: rgba(255,255,255,0.58);
+      font-size: 12.8px;
+      letter-spacing: 0.02em;
+    }
+
+    footer{
+      margin-top: 16px;
+      color: rgba(255,255,255,0.50);
+      text-align:center;
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+
+    /* reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      .ambient{ display:none; }
+      .btn{ transition:none; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Ambient breathing background -->
+  <div class="ambient" aria-hidden="true">
+    <div class="blob a" id="blobA"></div>
+    <div class="blob b" id="blobB"></div>
+    <div class="blob c" id="blobC"></div>
+  </div>
+
+  <div class="wrap">
+    <header>
+      <div class="kicker"><span class="dot"></span>NAVEGAÇÃO EXTERNA</div>
+      <h2>Use ferramentas de IA de terceiros para revisar e resumir um rascunho</h2>
+      <p class="subtitle">
+        Esta página explica como usar o prompt e o texto rascunho gerados por este app e, em seguida, utilizar plataformas de IA de terceiros na web para revisão ou resumo do conteúdo.<br>
+        <strong>Este app não fornece serviço de IA/LLM online.</strong><br>
+        Esta página é apenas um guia de uso e ajuda você a abrir uma plataforma de terceiros para concluir as etapas por conta própria.
+      </p>
+    </header>
+
+    <div class="grid">
+      <!-- Steps + buttons -->
+      <section class="card">
+        <div class="section-title">
+          <h2>🪜 Passo a passo</h2>
+          <!-- ✅ Exibição “Área de transferência: não verificada” removida -->
+        </div>
+
+        <ol class="steps">
+          <li class="step">
+            <h3>Passo 1: Cópia concluída (automaticamente pelo app)</h3>
+            <p>
+              Depois que você tocar em “Exportar prompt” dentro do app, o app copiará automaticamente o “prompt completo e o texto do rascunho” para a área de transferência.
+              Agora você pode ir direto a uma plataforma de IA de terceiros e colar o conteúdo.
+            </p>
+            <div class="hint">
+              (Se, ao colar, o conteúdo estiver vazio, volte ao app e toque novamente em “Exportar prompt” para copiar de novo.)
+            </div>
+          </li>
+
+          <li class="step">
+            <h3>Passo 2: Ir para uma plataforma de IA de terceiros</h3>
+            <p>
+              Escolha qualquer plataforma de IA online de terceiros e abra o site em um navegador externo.<br>
+              (Os botões abaixo servem apenas como guia de navegação; a plataforma usada é escolhida por você.)
+            </p>
+
+            <div class="buttons">
+              <button class="btn" data-href="https://gemini.google.com/" type="button">
+                Ir para a plataforma de IA de terceiros 1
+                <small>Abrir no navegador externo</small>
+                <span class="arrow">↗</span>
+              </button>
+
+              <button class="btn" data-href="https://chat.openai.com/" type="button">
+                Ir para a plataforma de IA de terceiros 2
+                <small>Abrir no navegador externo</small>
+                <span class="arrow">↗</span>
+              </button>
+
+              <button class="btn" data-href="https://claude.ai/" type="button">
+                Ir para a plataforma de IA de terceiros 3
+                <small>Abrir no navegador externo</small>
+                <span class="arrow">↗</span>
+              </button>
+
+              <button class="btn" data-href="https://chat.deepseek.com/" type="button">
+                Ir para a plataforma de IA de terceiros 4
+                <small>Abrir no navegador externo</small>
+                <span class="arrow">↗</span>
+              </button>
+            </div>
+
+            <p class="note">Ao tocar no botão, o site de terceiros será aberto em um navegador externo.</p>
+          </li>
+
+          <li class="step">
+            <h3>Passo 3: Colar e executar</h3>
+            <p>
+              Já na plataforma de IA de terceiros:<br>
+              1) Pressione e segure no campo de texto e escolha “Colar”<br>
+              2) Verifique se todo o conteúdo foi colado<br>
+              3) Siga as instruções da plataforma para revisar ou resumir o texto
+            </p>
+          </li>
+        </ol>
+
+        <div class="culture">
+          <p class="quote">
+            “Ferramentas transformam ideias em linguagem compartilhável;<br>
+            cultura devolve a linguagem ao contexto humano.”
+          </p>
+          <div class="sig">— Esta página é só um guia: o conteúdo é seu, a plataforma é sua escolha</div>
+        </div>
+      </section>
+
+      <!-- Legal / compliance -->
+      <aside class="card legal">
+        <h2><span class="warn"></span> ⚠️ Aviso importante </h2>
+        <ul>
+          <li>Este app não fornece nenhum serviço de IA/LLM online de terceiros e não processa nem transmite conteúdo em seu nome para plataformas de terceiros.</li>
+          <li>Os links desta página são fornecidos apenas como guia de navegação.</li>
+          <li><b>Funcionalidades, custos, planos gratuitos ou pagos e termos de uso de plataformas de IA de terceiros são definidos exclusivamente por cada plataforma e não têm relação com este app.</b></li>
+          <li>Seu uso e os resultados obtidos em plataformas de terceiros devem seguir as regras e os termos dessas plataformas.</li>
+        </ul>
+      </aside>
+    </div>
+
+    <footer>
+      <div>© <span id="year"></span> Tutorial Page</div>
+    </footer>
+  </div>
+
+  <script>
+    // ------------------------------------------------------------
+    // Breathing ambient background (subtle, tech + culture vibe)
+    // ------------------------------------------------------------
+    (function(){
+      const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const blobA = document.getElementById('blobA');
+      const blobB = document.getElementById('blobB');
+      const blobC = document.getElementById('blobC');
+
+      function rand(min, max){ return Math.random() * (max - min) + min; }
+
+      // initial positions
+      let t0 = performance.now();
+      const base = {
+        a: { x: rand(6, 18),  y: rand(4, 18),  s: 1.00 },
+        b: { x: rand(55, 72), y: rand(8, 22),  s: 1.05 },
+        c: { x: rand(34, 56), y: rand(62, 78), s: 1.10 },
+      };
+
+      function apply(el, x, y, s, r){
+        el.style.transform = `translate(${x}vw, ${y}vh) scale(${s}) rotate(${r}deg)`;
+      }
+
+      function animate(now){
+        const dt = (now - t0) / 1000;
+
+        // breathing curves
+        const b1 = 0.5 + 0.5 * Math.sin(dt * 0.8);
+        const b2 = 0.5 + 0.5 * Math.sin(dt * 0.6 + 1.2);
+        const b3 = 0.5 + 0.5 * Math.sin(dt * 0.7 + 2.1);
+
+        // tiny drift
+        const drift = (k) => 1.2 * Math.sin(dt * 0.12 + k) + 0.8 * Math.sin(dt * 0.07 + k * 2);
+
+        if (!prefersReduced){
+          apply(blobA,
+            base.a.x + drift(1) + (b1 - 0.5) * 2.0,
+            base.a.y + drift(2) + (b1 - 0.5) * 1.2,
+            base.a.s + (b1 - 0.5) * 0.08,
+            (b1 - 0.5) * 6
+          );
+          apply(blobB,
+            base.b.x + drift(3) + (b2 - 0.5) * 2.5,
+            base.b.y + drift(4) + (b2 - 0.5) * 1.4,
+            base.b.s + (b2 - 0.5) * 0.09,
+            (b2 - 0.5) * -7
+          );
+          apply(blobC,
+            base.c.x + drift(5) + (b3 - 0.5) * 2.2,
+            base.c.y + drift(6) + (b3 - 0.5) * 1.6,
+            base.c.s + (b3 - 0.5) * 0.10,
+            (b3 - 0.5) * 5
+          );
+          requestAnimationFrame(animate);
+        }
+      }
+      requestAnimationFrame(animate);
+    })();
+
+    // ------------------------------------------------------------
+    // Buttons: open external links
+    // ------------------------------------------------------------
+    document.querySelectorAll('.btn[data-href]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const url = btn.getAttribute('data-href');
+        if (!url) return;
+        window.open(url, '_blank', 'noopener,noreferrer');
+      });
+    });
+
+    // Footer year
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

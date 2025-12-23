@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Page d’aide｜Utiliser des outils d’IA tiers pour corriger et résumer du contenu</title>
+  <meta name="description" content="Cette page explique comment utiliser l’invite (prompt) et le brouillon générés par l’application, avec des outils d’IA en ligne tiers, afin d’effectuer des corrections et des résumés." />
+
+  <style>
+    :root{
+      --bg0:#070A12;
+      --bg1:#0A1024;
+      --card: rgba(255,255,255,0.06);
+      --card2: rgba(255,255,255,0.08);
+      --line: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.70);
+      --muted2: rgba(255,255,255,0.58);
+      --accent: rgba(120, 220, 255, 0.95);
+      --accent2: rgba(255, 170, 240, 0.92);
+      --warn: rgba(255, 210, 120, 0.95);
+      --shadow: 0 20px 60px rgba(0,0,0,0.45);
+      --radius: 18px;
+      --radius2: 22px;
+      --maxw: 980px;
+
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+        -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      --font-serif: ui-serif, "Times New Roman", Times, serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--font-sans);
+      color: var(--text);
+      background: radial-gradient(1200px 900px at 20% 10%, rgba(120,220,255,0.14), transparent 60%),
+                  radial-gradient(900px 700px at 80% 20%, rgba(255,170,240,0.12), transparent 55%),
+                  radial-gradient(1100px 800px at 60% 90%, rgba(140,255,210,0.10), transparent 60%),
+                  linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
+
+    /* breathing ambient blobs (JS will animate subtly) */
+    .ambient{
+      position:fixed;
+      inset:-20vh -20vw;
+      pointer-events:none;
+      filter: blur(30px);
+      opacity: 0.75;
+      z-index:0;
+    }
+    .blob{
+      position:absolute;
+      width: 420px;
+      height: 420px;
+      border-radius: 999px;
+      transform: translate3d(0,0,0);
+      mix-blend-mode: screen;
+      opacity: 0.55;
+    }
+    .blob.a{ background: radial-gradient(circle at 30% 30%, rgba(120,220,255,0.85), rgba(120,220,255,0.0) 65%); }
+    .blob.b{ background: radial-gradient(circle at 35% 40%, rgba(255,170,240,0.85), rgba(255,170,240,0.0) 68%); }
+    .blob.c{ background: radial-gradient(circle at 40% 35%, rgba(140,255,210,0.75), rgba(140,255,210,0.0) 70%); }
+
+    .wrap{
+      position:relative;
+      z-index:1;
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 28px 18px 60px;
+    }
+
+    header{
+      margin-top: 8px;
+      padding: 22px 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.04));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .kicker{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color: var(--muted2);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:99px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      box-shadow: 0 0 24px rgba(120,220,255,0.35);
+    }
+
+    h1{
+      margin: 10px 0 8px;
+      font-size: clamp(24px, 4.2vw, 38px);
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+    }
+    .subtitle{
+      margin: 0;
+      color: var(--muted);
+      font-size: 15.5px;
+      line-height: 1.7;
+    }
+    .subtitle strong{
+      font-weight: 700;
+      color: rgba(255,255,255,0.95);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (max-width: 860px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      border: 1px solid var(--line);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+      backdrop-filter: blur(10px);
+      padding: 18px 16px;
+    }
+
+    .section-title{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:10px;
+      margin: 0 0 10px;
+    }
+    .section-title h2{
+      margin:0;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+    }
+    .badge{
+      font-size: 12px;
+      color: rgba(255,255,255,0.78);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.05);
+      white-space: nowrap;
+    }
+
+    .steps{
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .step{
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      padding: 14px 14px 12px;
+      position:relative;
+      overflow:hidden;
+    }
+    .step::before{
+      content:"";
+      position:absolute;
+      inset: -2px -2px auto -2px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(120,220,255,0.55), rgba(255,170,240,0.35), transparent);
+      opacity: 0.8;
+    }
+    .step h3{
+      margin: 0 0 6px;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+    }
+    .step p{
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 14.5px;
+    }
+    .hint{
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px dashed rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.78);
+      background: rgba(255,255,255,0.03);
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+
+    .buttons{
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .btn{
+      width:100%;
+      appearance:none;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: radial-gradient(80% 140% at 10% 10%, rgba(120,220,255,0.18), rgba(255,255,255,0.05)),
+                  linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      color: rgba(255,255,255,0.92);
+      padding: 13px 14px;
+      border-radius: 16px;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      position:relative;
+      overflow:hidden;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.28);
+      text-align:left;
+    }
+    .btn:hover{
+      transform: translateY(-1px);
+      border-color: rgba(120,220,255,0.35);
+    }
+    .btn:active{
+      transform: translateY(0px) scale(0.995);
+    }
+    .btn small{
+      display:block;
+      margin-top: 4px;
+      color: rgba(255,255,255,0.62);
+      font-size: 12.5px;
+      letter-spacing: 0.02em;
+    }
+    .btn .arrow{
+      position:absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(0,0,0,0.18);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family: var(--font-mono);
+      color: rgba(255,255,255,0.78);
+    }
+
+    .note{
+      margin-top: 10px;
+      color: rgba(255,255,255,0.68);
+      font-size: 13.5px;
+      line-height: 1.65;
+      border-left: 3px solid rgba(255,255,255,0.18);
+      padding-left: 10px;
+    }
+
+    .legal{
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255, 210, 120, 0.12), rgba(255,255,255,0.03));
+      padding: 16px 14px;
+    }
+    .legal h2{
+      margin: 0 0 10px;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .legal h2 .warn{
+      width: 10px; height: 10px; border-radius: 999px;
+      background: var(--warn);
+      box-shadow: 0 0 18px rgba(255,210,120,0.35);
+    }
+    .legal ul{
+      margin: 0;
+      padding-left: 18px;
+      color: rgba(255,255,255,0.76);
+      line-height: 1.7;
+      font-size: 13.6px;
+    }
+    .legal li{ margin: 6px 0; }
+
+    .culture{
+      margin-top: 12px;
+      padding: 14px 14px;
+      border-radius: var(--radius2);
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.03);
+    }
+    .culture .quote{
+      margin:0;
+      font-family: var(--font-serif);
+      color: rgba(255,255,255,0.80);
+      line-height: 1.85;
+      font-size: 14.2px;
+    }
+    .culture .sig{
+      margin-top: 8px;
+      color: rgba(255,255,255,0.58);
+      font-size: 12.8px;
+      letter-spacing: 0.02em;
+    }
+
+    footer{
+      margin-top: 16px;
+      color: rgba(255,255,255,0.50);
+      text-align:center;
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+
+    /* reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      .ambient{ display:none; }
+      .btn{ transition:none; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Ambient breathing background -->
+  <div class="ambient" aria-hidden="true">
+    <div class="blob a" id="blobA"></div>
+    <div class="blob b" id="blobB"></div>
+    <div class="blob c" id="blobC"></div>
+  </div>
+
+  <div class="wrap">
+    <header>
+      <div class="kicker"><span class="dot"></span>GUIDE EXTERNE</div>
+      <h2>Utiliser des outils d’IA tiers pour corriger et résumer un brouillon</h2>
+      <p class="subtitle">
+        Cette page explique comment utiliser l’invite (prompt) et le brouillon générés par cette application, avec des outils d’IA en ligne tiers, afin d’effectuer des corrections ou des résumés.<br>
+        <strong>Cette application ne fournit pas de service d’IA/LLM en ligne.</strong><br>
+        Cette page sert uniquement de guide et aide l’utilisateur à se rendre sur une plateforme tierce pour réaliser la suite des opérations par lui-même.
+      </p>
+    </header>
+
+    <div class="grid">
+      <!-- Steps + buttons -->
+      <section class="card">
+        <div class="section-title">
+          <h2>🪜 Étapes</h2>
+          <!-- ✅ Le libellé « Presse-papiers : non vérifié » a été supprimé -->
+        </div>
+
+        <ol class="steps">
+          <li class="step">
+            <h3>Étape 1 : Copie terminée (effectuée automatiquement par l’application)</h3>
+            <p>
+              Lorsque vous appuyez sur « Exporter le prompt » dans l’application, celle-ci copie automatiquement dans le presse-papiers le « prompt complet et le texte du brouillon ».
+              Vous pouvez ensuite aller sur une plateforme d’IA tierce et coller le contenu directement.
+            </p>
+            <div class="hint">
+              (Si le contenu est vide lors du collage, revenez dans l’application et appuyez à nouveau sur « Exporter le prompt » pour recopier.)
+            </div>
+          </li>
+
+          <li class="step">
+            <h3>Étape 2 : Aller vers une plateforme d’IA tierce</h3>
+            <p>
+              Choisissez n’importe quelle plateforme d’IA en ligne tierce et ouvrez son site dans un navigateur externe.<br>
+              (Les boutons ci-dessous servent uniquement à la navigation ; la plateforme utilisée reste au choix de l’utilisateur.)
+            </p>
+
+            <div class="buttons">
+              <button class="btn" data-href="https://gemini.google.com/" type="button">
+                Aller à la plateforme d’IA tierce 1
+                <small>S’ouvre dans un navigateur externe</small>
+                <span class="arrow">↗</span>
+              </button>
+
+              <button class="btn" data-href="https://chat.openai.com/" type="button">
+                Aller à la plateforme d’IA tierce 2
+                <small>S’ouvre dans un navigateur externe</small>
+                <span class="arrow">↗</span>
+              </button>
+
+              <button class="btn" data-href="https://claude.ai/" type="button">
+                Aller à la plateforme d’IA tierce 3
+                <small>S’ouvre dans un navigateur externe</small>
+                <span class="arrow">↗</span>
+              </button>
+
+              <button class="btn" data-href="https://chat.deepseek.com/" type="button">
+                Aller à la plateforme d’IA tierce 4
+                <small>S’ouvre dans un navigateur externe</small>
+                <span class="arrow">↗</span>
+              </button>
+            </div>
+
+            <p class="note">En appuyant sur un bouton, le site tiers s’ouvrira dans un navigateur externe.</p>
+          </li>
+
+          <li class="step">
+            <h3>Étape 3 : Coller et exécuter</h3>
+            <p>
+              Une fois sur la plateforme d’IA tierce :<br>
+              1) Appuyez longuement dans la zone de saisie et choisissez « Coller »<br>
+              2) Vérifiez que l’intégralité du contenu a bien été collée<br>
+              3) Suivez les instructions de la plateforme pour corriger ou résumer le contenu
+            </p>
+          </li>
+        </ol>
+
+        <div class="culture">
+          <p class="quote">
+            « Un outil transforme une idée en langage partageable ;<br>
+            une culture redonne à ce langage son contexte humain. »
+          </p>
+          <div class="sig">— Cette page n’est qu’un guide : vous décidez du contenu, vous choisissez la plateforme</div>
+        </div>
+      </section>
+
+      <!-- Legal / compliance -->
+      <aside class="card legal">
+        <h2><span class="warn"></span> ⚠️ Avis important </h2>
+        <ul>
+          <li>Cette application ne fournit aucun service d’IA/LLM en ligne tiers et ne traite ni ne transmet de contenu vers une plateforme tierce en votre nom.</li>
+          <li>Les liens présents sur cette page sont fournis uniquement à titre de guide de navigation.</li>
+          <li><b>Les fonctionnalités, tarifs, offres gratuites ou payantes, ainsi que les conditions d’utilisation des plateformes d’IA tierces sont définis par chaque plateforme et ne concernent pas cette application.</b></li>
+          <li>Les actions effectuées et les résultats obtenus sur une plateforme tierce doivent respecter ses règles et ses conditions.</li>
+        </ul>
+      </aside>
+    </div>
+
+    <footer>
+      <div>© <span id="year"></span> Tutorial Page</div>
+    </footer>
+  </div>
+
+  <script>
+    // ------------------------------------------------------------
+    // Breathing ambient background (subtle, tech + culture vibe)
+    // ------------------------------------------------------------
+    (function(){
+      const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const blobA = document.getElementById('blobA');
+      const blobB = document.getElementById('blobB');
+      const blobC = document.getElementById('blobC');
+
+      function rand(min, max){ return Math.random() * (max - min) + min; }
+
+      // initial positions
+      let t0 = performance.now();
+      const base = {
+        a: { x: rand(6, 18),  y: rand(4, 18),  s: 1.00 },
+        b: { x: rand(55, 72), y: rand(8, 22),  s: 1.05 },
+        c: { x: rand(34, 56), y: rand(62, 78), s: 1.10 },
+      };
+
+      function apply(el, x, y, s, r){
+        el.style.transform = `translate(${x}vw, ${y}vh) scale(${s}) rotate(${r}deg)`;
+      }
+
+      function animate(now){
+        const dt = (now - t0) / 1000;
+
+        // breathing curves
+        const b1 = 0.5 + 0.5 * Math.sin(dt * 0.8);
+        const b2 = 0.5 + 0.5 * Math.sin(dt * 0.6 + 1.2);
+        const b3 = 0.5 + 0.5 * Math.sin(dt * 0.7 + 2.1);
+
+        // tiny drift
+        const drift = (k) => 1.2 * Math.sin(dt * 0.12 + k) + 0.8 * Math.sin(dt * 0.07 + k * 2);
+
+        if (!prefersReduced){
+          apply(blobA,
+            base.a.x + drift(1) + (b1 - 0.5) * 2.0,
+            base.a.y + drift(2) + (b1 - 0.5) * 1.2,
+            base.a.s + (b1 - 0.5) * 0.08,
+            (b1 - 0.5) * 6
+          );
+          apply(blobB,
+            base.b.x + drift(3) + (b2 - 0.5) * 2.5,
+            base.b.y + drift(4) + (b2 - 0.5) * 1.4,
+            base.b.s + (b2 - 0.5) * 0.09,
+            (b2 - 0.5) * -7
+          );
+          apply(blobC,
+            base.c.x + drift(5) + (b3 - 0.5) * 2.2,
+            base.c.y + drift(6) + (b3 - 0.5) * 1.6,
+            base.c.s + (b3 - 0.5) * 0.10,
+            (b3 - 0.5) * 5
+          );
+          requestAnimationFrame(animate);
+        }
+      }
+      requestAnimationFrame(animate);
+    })();
+
+    // ------------------------------------------------------------
+    // Buttons: open external links
+    // ------------------------------------------------------------
+    document.querySelectorAll('.btn[data-href]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const url = btn.getAttribute('data-href');
+        if (!url) return;
+        window.open(url, '_blank', 'noopener,noreferrer');
+      });
+    });
+
+    // Footer year
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

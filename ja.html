@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>チュートリアル｜第三者AIツールで内容の修正・要約を行う</title>
+  <meta name="description" content="本ページでは、本アプリが生成したプロンプトと下書きテキストを、第三者のオンラインAIツールと組み合わせて内容の修正・要約を行う方法を説明します。" />
+
+  <style>
+    :root{
+      --bg0:#070A12;
+      --bg1:#0A1024;
+      --card: rgba(255,255,255,0.06);
+      --card2: rgba(255,255,255,0.08);
+      --line: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.70);
+      --muted2: rgba(255,255,255,0.58);
+      --accent: rgba(120, 220, 255, 0.95);
+      --accent2: rgba(255, 170, 240, 0.92);
+      --warn: rgba(255, 210, 120, 0.95);
+      --shadow: 0 20px 60px rgba(0,0,0,0.45);
+      --radius: 18px;
+      --radius2: 22px;
+      --maxw: 980px;
+
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+        "Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Meiryo", Arial, sans-serif;
+      --font-serif: ui-serif, "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho",
+        "MS Mincho", serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--font-sans);
+      color: var(--text);
+      background: radial-gradient(1200px 900px at 20% 10%, rgba(120,220,255,0.14), transparent 60%),
+                  radial-gradient(900px 700px at 80% 20%, rgba(255,170,240,0.12), transparent 55%),
+                  radial-gradient(1100px 800px at 60% 90%, rgba(140,255,210,0.10), transparent 60%),
+                  linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
+
+    /* breathing ambient blobs (JS will animate subtly) */
+    .ambient{
+      position:fixed;
+      inset:-20vh -20vw;
+      pointer-events:none;
+      filter: blur(30px);
+      opacity: 0.75;
+      z-index:0;
+    }
+    .blob{
+      position:absolute;
+      width: 420px;
+      height: 420px;
+      border-radius: 999px;
+      transform: translate3d(0,0,0);
+      mix-blend-mode: screen;
+      opacity: 0.55;
+    }
+    .blob.a{ background: radial-gradient(circle at 30% 30%, rgba(120,220,255,0.85), rgba(120,220,255,0.0) 65%); }
+    .blob.b{ background: radial-gradient(circle at 35% 40%, rgba(255,170,240,0.85), rgba(255,170,240,0.0) 68%); }
+    .blob.c{ background: radial-gradient(circle at 40% 35%, rgba(140,255,210,0.75), rgba(140,255,210,0.0) 70%); }
+
+    .wrap{
+      position:relative;
+      z-index:1;
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 28px 18px 60px;
+    }
+
+    header{
+      margin-top: 8px;
+      padding: 22px 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.04));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .kicker{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color: var(--muted2);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:99px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      box-shadow: 0 0 24px rgba(120,220,255,0.35);
+    }
+
+    h1{
+      margin: 10px 0 8px;
+      font-size: clamp(24px, 4.2vw, 38px);
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+    }
+    .subtitle{
+      margin: 0;
+      color: var(--muted);
+      font-size: 15.5px;
+      line-height: 1.7;
+    }
+    .subtitle strong{
+      font-weight: 700;
+      color: rgba(255,255,255,0.95);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (max-width: 860px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      border: 1px solid var(--line);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+      backdrop-filter: blur(10px);
+      padding: 18px 16px;
+    }
+
+    .section-title{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:10px;
+      margin: 0 0 10px;
+    }
+    .section-title h2{
+      margin:0;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+    }
+    .badge{
+      font-size: 12px;
+      color: rgba(255,255,255,0.78);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.05);
+      white-space: nowrap;
+    }
+
+    .steps{
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .step{
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      padding: 14px 14px 12px;
+      position:relative;
+      overflow:hidden;
+    }
+    .step::before{
+      content:"";
+      position:absolute;
+      inset: -2px -2px auto -2px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(120,220,255,0.55), rgba(255,170,240,0.35), transparent);
+      opacity: 0.8;
+    }
+    .step h3{
+      margin: 0 0 6px;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+    }
+    .step p{
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 14.5px;
+    }
+    .hint{
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px dashed rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.78);
+      background: rgba(255,255,255,0.03);
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+
+    .buttons{
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .btn{
+      width:100%;
+      appearance:none;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: radial-gradient(80% 140% at 10% 10%, rgba(120,220,255,0.18), rgba(255,255,255,0.05)),
+                  linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      color: rgba(255,255,255,0.92);
+      padding: 13px 14px;
+      border-radius: 16px;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      position:relative;
+      overflow:hidden;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.28);
+      text-align:left;
+    }
+    .btn:hover{
+      transform: translateY(-1px);
+      border-color: rgba(120,220,255,0.35);
+    }
+    .btn:active{
+      transform: translateY(0px) scale(0.995);
+    }
+    .btn small{
+      display:block;
+      margin-top: 4px;
+      color: rgba(255,255,255,0.62);
+      font-size: 12.5px;
+      letter-spacing: 0.02em;
+    }
+    .btn .arrow{
+      position:absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(0,0,0,0.18);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family: var(--font-mono);
+      color: rgba(255,255,255,0.78);
+    }
+
+    .note{
+      margin-top: 10px;
+      color: rgba(255,255,255,0.68);
+      font-size: 13.5px;
+      line-height: 1.65;
+      border-left: 3px solid rgba(255,255,255,0.18);
+      padding-left: 10px;
+    }
+
+    .legal{
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255, 210, 120, 0.12), rgba(255,255,255,0.03));
+      padding: 16px 14px;
+    }
+    .legal h2{
+      margin: 0 0 10px;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .legal h2 .warn{
+      width: 10px; height: 10px; border-radius: 999px;
+      background: var(--warn);
+      box-shadow: 0 0 18px rgba(255,210,120,0.35);
+    }
+    .legal ul{
+      margin: 0;
+      padding-left: 18px;
+      color: rgba(255,255,255,0.76);
+      line-height: 1.7;
+      font-size: 13.6px;
+    }
+    .legal li{ margin: 6px 0; }
+
+    .culture{
+      margin-top: 12px;
+      padding: 14px 14px;
+      border-radius: var(--radius2);
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.03);
+    }
+    .culture .quote{
+      margin:0;
+      font-family: var(--font-serif);
+      color: rgba(255,255,255,0.80);
+      line-height: 1.85;
+      font-size: 14.2px;
+    }
+    .culture .sig{
+      margin-top: 8px;
+      color: rgba(255,255,255,0.58);
+      font-size: 12.8px;
+      letter-spacing: 0.02em;
+    }
+
+    footer{
+      margin-top: 16px;
+      color: rgba(255,255,255,0.50);
+      text-align:center;
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+
+    /* reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      .ambient{ display:none; }
+      .btn{ transition:none; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Ambient breathing background -->
+  <div class="ambient" aria-hidden="true">
+    <div class="blob a" id="blobA"></div>
+    <div class="blob b" id="blobB"></div>
+    <div class="blob c" id="blobC"></div>
+  </div>
+
+  <div class="wrap">
+    <header>
+      <div class="kicker"><span class="dot"></span>外部ガイド</div>
+      <h2>第三者AIツールで下書きを修正・要約する</h2>
+      <p class="subtitle">
+        本ページでは、本アプリが生成したプロンプトと下書きテキストを利用し、第三者のオンラインAIツールで内容の修正・要約を行う方法を案内します。<br>
+        <strong>本アプリはオンラインAI/LLMサービスを提供しません。</strong><br>
+        本ページは操作ガイドのみを目的としており、第三者プラットフォーム上での処理はユーザーご自身で行ってください。
+      </p>
+    </header>
+
+    <div class="grid">
+      <!-- Steps + buttons -->
+      <section class="card">
+        <div class="section-title">
+          <h2>🪜 手順</h2>
+          <!-- ✅ 「クリップボード：未確認」の表示は削除 -->
+        </div>
+
+        <ol class="steps">
+          <li class="step">
+            <h3>手順1：コピー完了（アプリが自動で実行）</h3>
+            <p>
+              アプリ内で「プロンプトを出力」をタップすると、アプリが「完全なプロンプトと下書きテキスト」をクリップボードに自動コピーします。
+              そのまま第三者AIプラットフォームに移動して貼り付けてください。
+            </p>
+            <div class="hint">
+              （貼り付けた内容が空の場合は、アプリに戻ってもう一度「プロンプトを出力」をタップして再コピーしてください。）
+            </div>
+          </li>
+
+          <li class="step">
+            <h3>手順2：第三者AIプラットフォームを開く</h3>
+            <p>
+              任意の第三者オンラインAIプラットフォームを選び、外部ブラウザでそのWebサイトを開いてください。<br>
+              （以下のボタンは便宜上のナビゲーション用です。実際に利用するプラットフォームはユーザーが選択してください。）
+            </p>
+
+            <div class="buttons">
+              <button class="btn" data-href="https://gemini.google.com/" type="button">
+                第三者AIプラットフォーム 1 を開く
+                <small>外部ブラウザで開きます</small>
+                <span class="arrow">↗</span>
+              </button>
+
+              <button class="btn" data-href="https://chat.openai.com/" type="button">
+                第三者AIプラットフォーム 2 を開く
+                <small>外部ブラウザで開きます</small>
+                <span class="arrow">↗</span>
+              </button>
+
+              <button class="btn" data-href="https://claude.ai/" type="button">
+                第三者AIプラットフォーム 3 を開く
+                <small>外部ブラウザで開きます</small>
+                <span class="arrow">↗</span>
+              </button>
+
+              <button class="btn" data-href="https://chat.deepseek.com/" type="button">
+                第三者AIプラットフォーム 4 を開く
+                <small>外部ブラウザで開きます</small>
+                <span class="arrow">↗</span>
+              </button>
+            </div>
+
+            <p class="note">ボタンをタップすると、外部ブラウザで第三者サイトが開きます。</p>
+          </li>
+
+          <li class="step">
+            <h3>手順3：貼り付けて実行</h3>
+            <p>
+              第三者AIプラットフォームで：<br>
+              1) 入力欄を長押しして「貼り付け」を選択<br>
+              2) 内容がすべて貼り付けられていることを確認<br>
+              3) そのプラットフォームの手順に従って、修正または要約を実行
+            </p>
+          </li>
+        </ol>
+
+        <div class="culture">
+          <p class="quote">
+            「道具は、考えを共有できる言葉に変える。<br>
+            文化は、言葉を人の文脈へ戻す。」
+          </p>
+          <div class="sig">— このページはガイドのみ：内容はあなたが決め、プラットフォームはあなたが選ぶ</div>
+        </div>
+      </section>
+
+      <!-- Legal / compliance -->
+      <aside class="card legal">
+        <h2><span class="warn"></span> ⚠️ 重要なお知らせ </h2>
+        <ul>
+          <li>本アプリは第三者のオンラインAI/LLMサービスを提供しておらず、内容を第三者プラットフォームへ代行して処理・送信することもありません。</li>
+          <li>本ページのリンクは操作案内・便宜のためのナビゲーションとして提供されています。</li>
+          <li><b>第三者AIプラットフォームの機能、料金、無料/有料プラン、利用規約は各プラットフォームが定めるものであり、本アプリとは無関係です。</b></li>
+          <li>第三者プラットフォーム上での操作と結果は、そのプラットフォームの規約・ルールに従ってください。</li>
+        </ul>
+      </aside>
+    </div>
+
+    <footer>
+      <div>© <span id="year"></span> Tutorial Page</div>
+    </footer>
+  </div>
+
+  <script>
+    // ------------------------------------------------------------
+    // Breathing ambient background (subtle, tech + culture vibe)
+    // ------------------------------------------------------------
+    (function(){
+      const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const blobA = document.getElementById('blobA');
+      const blobB = document.getElementById('blobB');
+      const blobC = document.getElementById('blobC');
+
+      function rand(min, max){ return Math.random() * (max - min) + min; }
+
+      // initial positions
+      let t0 = performance.now();
+      const base = {
+        a: { x: rand(6, 18),  y: rand(4, 18),  s: 1.00 },
+        b: { x: rand(55, 72), y: rand(8, 22),  s: 1.05 },
+        c: { x: rand(34, 56), y: rand(62, 78), s: 1.10 },
+      };
+
+      function apply(el, x, y, s, r){
+        el.style.transform = `translate(${x}vw, ${y}vh) scale(${s}) rotate(${r}deg)`;
+      }
+
+      function animate(now){
+        const dt = (now - t0) / 1000;
+
+        // breathing curves
+        const b1 = 0.5 + 0.5 * Math.sin(dt * 0.8);
+        const b2 = 0.5 + 0.5 * Math.sin(dt * 0.6 + 1.2);
+        const b3 = 0.5 + 0.5 * Math.sin(dt * 0.7 + 2.1);
+
+        // tiny drift
+        const drift = (k) => 1.2 * Math.sin(dt * 0.12 + k) + 0.8 * Math.sin(dt * 0.07 + k * 2);
+
+        if (!prefersReduced){
+          apply(blobA,
+            base.a.x + drift(1) + (b1 - 0.5) * 2.0,
+            base.a.y + drift(2) + (b1 - 0.5) * 1.2,
+            base.a.s + (b1 - 0.5) * 0.08,
+            (b1 - 0.5) * 6
+          );
+          apply(blobB,
+            base.b.x + drift(3) + (b2 - 0.5) * 2.5,
+            base.b.y + drift(4) + (b2 - 0.5) * 1.4,
+            base.b.s + (b2 - 0.5) * 0.09,
+            (b2 - 0.5) * -7
+          );
+          apply(blobC,
+            base.c.x + drift(5) + (b3 - 0.5) * 2.2,
+            base.c.y + drift(6) + (b3 - 0.5) * 1.6,
+            base.c.s + (b3 - 0.5) * 0.10,
+            (b3 - 0.5) * 5
+          );
+          requestAnimationFrame(animate);
+        }
+      }
+      requestAnimationFrame(animate);
+    })();
+
+    // ------------------------------------------------------------
+    // Buttons: open external links
+    // ------------------------------------------------------------
+    document.querySelectorAll('.btn[data-href]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const url = btn.getAttribute('data-href');
+        if (!url) return;
+        window.open(url, '_blank', 'noopener,noreferrer');
+      });
+    });
+
+    // Footer year
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
